@@ -1,0 +1,2 @@
+import { authorizedUser } from '@/lib/auth';
+export async function POST(_:Request,{params}:{params:Promise<{id:string}>}){const {supabase,response}=await authorizedUser();if(response)return response;const {id}=await params;const {data,error}=await supabase.rpc('complete_receiving_session',{p_session_id:id});if(error)return Response.json({error:error.message},{status:400});return Response.json(data);}
