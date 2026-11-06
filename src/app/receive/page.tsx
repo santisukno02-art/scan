@@ -57,6 +57,7 @@ export default function Receive() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const pagesRef = useRef<ScannedPage[]>([]);
@@ -73,7 +74,11 @@ export default function Receive() {
         streamRef.current = stream;
         if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'เปิดกล้องไม่สำเร็จ');
+        const cameraError = cause instanceof DOMException ? cause.name : '';
+        if (!window.isSecureContext) setError('กล้องสดต้องเปิดเว็บไซต์ผ่าน HTTPS กรุณาใช้ URL ของ Vercel ที่ขึ้นต้นด้วย https://');
+        else if (cameraError === 'NotAllowedError' || cameraError === 'PermissionDeniedError') setError('เบราว์เซอร์ยังไม่อนุญาตใช้กล้อง กดไอคอนข้าง URL แล้วเปลี่ยน Camera เป็น Allow หรือใช้ปุ่มถ่ายภาพจากอุปกรณ์');
+        else if (cameraError === 'NotFoundError' || cameraError === 'DevicesNotFoundError') setError('ไม่พบกล้องในอุปกรณ์ ใช้ปุ่มถ่ายภาพจากอุปกรณ์หรือเลือกรูปแทน');
+        else setError(cause instanceof Error ? cause.message : 'เปิดกล้องไม่สำเร็จ ใช้ปุ่มถ่ายภาพจากอุปกรณ์แทนได้');
         setCameraOn(false);
       }
     }
@@ -250,13 +255,15 @@ export default function Receive() {
           <strong>เพิ่มเอกสารใบโอน</strong>
           <div className="muted small" style={{ marginTop: 4 }}>ลากไฟล์มาวางที่นี่ หรือเลือกจากอุปกรณ์</div>
           <div className="upload-actions">
+            <button className="button primary" type="button" onClick={() => { setError(''); cameraInputRef.current?.click(); }}><Camera size={16}/> ถ่ายภาพหน้าเอกสาร</button>
             <button className="button" type="button" onClick={() => inputRef.current?.click()}><Upload size={16}/> เลือกรูป / PDF</button>
-            <button className={`button ${cameraOn ? 'primary' : ''}`} type="button" onClick={() => { setError(''); setCameraOn(value => !value); }}><Camera size={16}/>{cameraOn ? 'ปิดกล้อง' : 'เปิดกล้องถ่ายเอกสาร'}</button>
+            <button className={`button ${cameraOn ? 'primary' : ''}`} type="button" onClick={() => { setError(''); setCameraOn(value => !value); }}><ScanText size={16}/>{cameraOn ? 'ปิดกล้องสด' : 'เปิดกล้องสด'}</button>
           </div>
           <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple hidden onChange={event => { if (event.target.files?.length) void addFiles(event.target.files); event.target.value = ''; }}/>
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" hidden onChange={event => { if (event.target.files?.length) void addFiles(event.target.files); event.target.value = ''; }}/>
         </div>
 
-        {cameraOn && <div className="camera-card space"><div className="scanner"><video ref={videoRef} autoPlay muted playsInline aria-label="ภาพจากกล้องถ่ายเอกสาร"/></div><div className="split mobile-stack space"><div><strong>จัดกระดาษให้เต็มกรอบ</strong><div className="muted small">ถ่ายเสร็จแล้วถ่ายหน้าถัดไปต่อได้เลย</div></div><button className="button primary" type="button" onClick={() => void capturePage()}><Camera size={16}/> ถ่ายเก็บหน้านี้</button></div></div>}
+        {cameraOn && <div className="camera-card space"><div className="scanner"><video ref={videoRef} autoPlay muted playsInline aria-label="ภาพจากกล้องถ่ายเอกสาร"/><span className="camera-hint">จัดกระดาษให้อยู่ในกรอบแล้วถ่ายภาพ</span></div><div className="split mobile-stack space"><div><strong>กล้องสด</strong><div className="muted small">ถ่ายเสร็จแล้วถ่ายหน้าถัดไปต่อได้เลย</div></div><div className="row"><button className="button" type="button" onClick={() => cameraInputRef.current?.click()}><Camera size={16}/> ใช้กล้องของอุปกรณ์</button><button className="button primary" type="button" onClick={() => void capturePage()}><Camera size={16}/> ถ่ายจากภาพสด</button></div></div></div>}
 
         {pages.length > 0 && <div className="space stack">
           <div className="split"><h3 className="section-title">ภาพเอกสารที่เลือก</h3><button className="button" type="button" onClick={() => { pages.forEach(page => URL.revokeObjectURL(page.preview)); setPages([]); setItems([]); setNotice(''); setError(''); }}>ล้างทั้งหมด</button></div>
