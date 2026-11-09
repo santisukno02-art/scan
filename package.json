@@ -2,7 +2,7 @@
   "name": "boxcheck",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "lint": "next lint" },
+  "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "lint": "tsc --noEmit", "test": "node --test src/lib/ocr/*.test.mjs src/lib/scan/*.test.mjs" },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
